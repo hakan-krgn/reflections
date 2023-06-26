@@ -12,22 +12,35 @@ import java.util.function.Predicate;
  * <p>it is preferred to use {@link org.reflections.util.ConfigurationBuilder}
  */
 public interface Configuration {
-    /** the scanner instances used for indexing metadata. defaults to {@code SubTypes} and {@code TypesAnnotated}. */
+
+    /**
+     * the scanner instances used for indexing metadata. defaults to {@code SubTypes} and {@code TypesAnnotated}.
+     */
     Set<Scanner> getScanners();
 
-    /** the urls to be scanned. required. */
+    /**
+     * the urls to be scanned. required.
+     */
     Set<URL> getUrls();
 
-    /** the fully qualified name filter used to filter types to be scanned. defaults to accept all inputs (if null). */
+    /**
+     * the fully qualified name filter used to filter types to be scanned. defaults to accept all inputs (if null).
+     */
     Predicate<String> getInputsFilter();
 
-    /** scan urls in parallel. defaults to true. */
+    /**
+     * scan urls in parallel. defaults to true.
+     */
     boolean isParallel();
 
-    /** optional class loaders used for resolving types. */
+    /**
+     * optional class loaders used for resolving types.
+     */
     ClassLoader[] getClassLoaders();
 
-    /** if true (default), expand super types after scanning, for super types that were not scanned.
-     * <p>see {@link Reflections#expandSuperTypes(Map, Map)}*/
+    /**
+     * if true (default), expand super types after scanning, for super types that were not scanned.
+     * <p>see {@link Reflections#expandSuperTypes(Map, Map)}
+     */
     boolean shouldExpandSuperTypes();
 }

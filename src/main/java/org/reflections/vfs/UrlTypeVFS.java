@@ -1,6 +1,5 @@
 package org.reflections.vfs;
 
-import org.reflections.Reflections;
 import org.reflections.ReflectionsException;
 import org.reflections.vfs.Vfs.Dir;
 import org.reflections.vfs.Vfs.UrlType;
@@ -19,10 +18,11 @@ import java.util.regex.Pattern;
  * This class handles the vfszip and vfsfile protocol of JBOSS files.
  * <p>
  * <p>to use it, register it in Vfs via {@link org.reflections.vfs.Vfs#addDefaultURLTypes(org.reflections.vfs.Vfs.UrlType)} or {@link org.reflections.vfs.Vfs#setDefaultURLTypes(java.util.List)}.
- * @author Sergio Pola
  *
+ * @author Sergio Pola
  */
 public class UrlTypeVFS implements UrlType {
+
     public final static String[] REPLACE_EXTENSION = new String[]{".ear/", ".jar/", ".war/", ".sar/", ".har/", ".par/"};
 
     final String VFSZIP = "vfszip";
@@ -40,9 +40,7 @@ public class UrlTypeVFS implements UrlType {
             try {
                 return new ZipDir(new JarFile(url.getFile()));
             } catch (IOException e1) {
-                if (Reflections.log != null) {
-                    Reflections.log.warn("Could not get URL", e);
-                }
+                e1.printStackTrace();
             }
         }
         return null;
@@ -66,7 +64,9 @@ public class UrlTypeVFS implements UrlType {
 
             if (pos > 0) {
                 File file = new File(path.substring(0, pos - 1));
-                if (acceptFile.test(file)) { return replaceZipSeparatorStartingFrom(path, pos); }
+                if (acceptFile.test(file)) {
+                    return replaceZipSeparatorStartingFrom(path, pos);
+                }
             }
         }
 

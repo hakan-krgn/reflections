@@ -19,7 +19,14 @@ import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import static org.reflections.util.JavassistHelper.*;
+import static org.reflections.util.JavassistHelper.fieldName;
+import static org.reflections.util.JavassistHelper.getAnnotations;
+import static org.reflections.util.JavassistHelper.getConstructors;
+import static org.reflections.util.JavassistHelper.getMethods;
+import static org.reflections.util.JavassistHelper.getParameters;
+import static org.reflections.util.JavassistHelper.getParametersAnnotations;
+import static org.reflections.util.JavassistHelper.getReturnType;
+import static org.reflections.util.JavassistHelper.methodName;
 
 /**
  * base Reflections {@link Scanner}s such as:
@@ -37,17 +44,19 @@ import static org.reflections.util.JavassistHelper.*;
  *   <li>{@link #MethodsReturn}</li>
  * </ul>
  * <i>note that scanners must be configured in {@link org.reflections.Configuration} in order to be queried</i>
- * */
+ */
 public enum Scanners implements Scanner, QueryBuilder, NameHelper {
 
-    /** scan type superclasses and interfaces
+    /**
+     * scan type superclasses and interfaces
      * <p></p>
      * <i>Note that {@code Object} class is excluded by default, in order to reduce store size.
      * <br>Use {@link #filterResultsBy(Predicate)} to change, for example {@code SubTypes.filterResultsBy(c -> true)}</i>
-     * */
+     */
     SubTypes {
-        /* Object class is excluded by default from subtypes indexing */
-        { filterResultsBy(new FilterBuilder().excludePattern("java\\.lang\\.Object")); }
+        /* Object class is excluded by default from subtypes indexing */ {
+            filterResultsBy(new FilterBuilder().excludePattern("java\\.lang\\.Object"));
+        }
 
         @Override
         public void scan(ClassFile classFile, List<Map.Entry<String, String>> entries) {
@@ -56,7 +65,9 @@ public enum Scanners implements Scanner, QueryBuilder, NameHelper {
         }
     },
 
-    /** scan type annotations */
+    /**
+     * scan type annotations
+     */
     TypesAnnotated {
         @Override
         public boolean acceptResult(String annotation) {
@@ -69,34 +80,42 @@ public enum Scanners implements Scanner, QueryBuilder, NameHelper {
         }
     },
 
-    /** scan method annotations */
+    /**
+     * scan method annotations
+     */
     MethodsAnnotated {
         @Override
         public void scan(ClassFile classFile, List<Map.Entry<String, String>> entries) {
             getMethods(classFile).forEach(method ->
-                entries.addAll(entries(getAnnotations(method::getAttribute), methodName(classFile, method))));
+                    entries.addAll(entries(getAnnotations(method::getAttribute), methodName(classFile, method))));
         }
     },
 
-    /** scan constructor annotations */
+    /**
+     * scan constructor annotations
+     */
     ConstructorsAnnotated {
         @Override
         public void scan(ClassFile classFile, List<Map.Entry<String, String>> entries) {
             getConstructors(classFile).forEach(constructor ->
-                entries.addAll(entries(getAnnotations(constructor::getAttribute), methodName(classFile, constructor))));
+                    entries.addAll(entries(getAnnotations(constructor::getAttribute), methodName(classFile, constructor))));
         }
     },
 
-    /** scan field annotations */
+    /**
+     * scan field annotations
+     */
     FieldsAnnotated {
         @Override
         public void scan(ClassFile classFile, List<Map.Entry<String, String>> entries) {
             classFile.getFields().forEach(field ->
-                entries.addAll(entries(getAnnotations(field::getAttribute), fieldName(classFile, field))));
+                    entries.addAll(entries(getAnnotations(field::getAttribute), fieldName(classFile, field))));
         }
     },
 
-    /** scan non .class files such as xml or properties files */
+    /**
+     * scan non .class files such as xml or properties files
+     */
     Resources {
         @Override
         public boolean acceptsInput(String file) {
@@ -116,12 +135,14 @@ public enum Scanners implements Scanner, QueryBuilder, NameHelper {
         @Override
         public QueryFunction<Store, String> with(String pattern) {
             return store -> store.getOrDefault(index(), Collections.emptyMap())
-                .entrySet().stream().filter(entry -> entry.getKey().matches(pattern))
-                .flatMap(entry -> entry.getValue().stream()).collect(Collectors.toCollection(LinkedHashSet::new));
+                    .entrySet().stream().filter(entry -> entry.getKey().matches(pattern))
+                    .flatMap(entry -> entry.getValue().stream()).collect(Collectors.toCollection(LinkedHashSet::new));
         }
     },
 
-    /** scan method parameters types and annotations */
+    /**
+     * scan method parameters types and annotations
+     */
     MethodsParameter {
         @Override
         public void scan(ClassFile classFile, List<Map.Entry<String, String>> entries) {
@@ -133,7 +154,9 @@ public enum Scanners implements Scanner, QueryBuilder, NameHelper {
         }
     },
 
-    /** scan constructor parameters types and annotations */
+    /**
+     * scan constructor parameters types and annotations
+     */
     ConstructorsParameter {
         @Override
         public void scan(ClassFile classFile, List<Map.Entry<String, String>> entries) {
@@ -145,12 +168,14 @@ public enum Scanners implements Scanner, QueryBuilder, NameHelper {
         }
     },
 
-    /** scan methods signature */
+    /**
+     * scan methods signature
+     */
     MethodsSignature {
         @Override
         public void scan(ClassFile classFile, List<Map.Entry<String, String>> entries) {
             getMethods(classFile).forEach(method ->
-                entries.add(entry(getParameters(method).toString(), methodName(classFile, method))));
+                    entries.add(entry(getParameters(method).toString(), methodName(classFile, method))));
         }
 
         @Override
@@ -159,12 +184,14 @@ public enum Scanners implements Scanner, QueryBuilder, NameHelper {
         }
     },
 
-    /** scan constructors signature */
+    /**
+     * scan constructors signature
+     */
     ConstructorsSignature {
         @Override
         public void scan(ClassFile classFile, List<Map.Entry<String, String>> entries) {
             getConstructors(classFile).forEach(constructor ->
-                entries.add(entry(getParameters(constructor).toString(), methodName(classFile, constructor))));
+                    entries.add(entry(getParameters(constructor).toString(), methodName(classFile, constructor))));
         }
 
         @Override
@@ -173,12 +200,14 @@ public enum Scanners implements Scanner, QueryBuilder, NameHelper {
         }
     },
 
-    /** scan method return type */
+    /**
+     * scan method return type
+     */
     MethodsReturn {
         @Override
         public void scan(ClassFile classFile, List<Map.Entry<String, String>> entries) {
             getMethods(classFile).forEach(method ->
-                entries.add(entry(getReturnType(method), methodName(classFile, method))));
+                    entries.add(entry(getReturnType(method), methodName(classFile, method))));
         }
     };
 

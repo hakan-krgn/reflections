@@ -31,13 +31,13 @@ import java.nio.file.Files;
  *   }
  * }
  * }</pre>
- * */
+ */
 public class JsonSerializer implements Serializer {
 
     @Override
     public Reflections read(InputStream inputStream) {
         return new GsonBuilder().setPrettyPrinting().create()
-            .fromJson(new InputStreamReader(inputStream), Reflections.class);
+                .fromJson(new InputStreamReader(inputStream), Reflections.class);
     }
 
     @Override

@@ -35,9 +35,9 @@ public class MethodParameterNamesScanner implements Scanner {
         if (length > 0) {
             int shift = Modifier.isStatic(method.getAccessFlags()) ? 0 : 1; //skip this
             return IntStream.range(shift, length + shift)
-                .mapToObj(i -> method.getConstPool().getUtf8Info(table.nameIndex(i)))
-                .filter(name -> !name.startsWith("this$"))
-                .collect(Collectors.joining(", "));
+                    .mapToObj(i -> method.getConstPool().getUtf8Info(table.nameIndex(i)))
+                    .filter(name -> !name.startsWith("this$"))
+                    .collect(Collectors.joining(", "));
         }
         return "";
     }

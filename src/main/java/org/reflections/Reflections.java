@@ -13,10 +13,7 @@ import org.reflections.util.FilterBuilder;
 import org.reflections.util.NameHelper;
 import org.reflections.util.QueryFunction;
 import org.reflections.vfs.Vfs;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
@@ -45,10 +42,19 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static java.lang.String.format;
 import static org.reflections.ReflectionUtils.withAnnotation;
 import static org.reflections.ReflectionUtils.withAnyParameterAnnotation;
-import static org.reflections.scanners.Scanners.*;
+import static org.reflections.scanners.Scanners.ConstructorsAnnotated;
+import static org.reflections.scanners.Scanners.ConstructorsParameter;
+import static org.reflections.scanners.Scanners.ConstructorsSignature;
+import static org.reflections.scanners.Scanners.FieldsAnnotated;
+import static org.reflections.scanners.Scanners.MethodsAnnotated;
+import static org.reflections.scanners.Scanners.MethodsParameter;
+import static org.reflections.scanners.Scanners.MethodsReturn;
+import static org.reflections.scanners.Scanners.MethodsSignature;
+import static org.reflections.scanners.Scanners.Resources;
+import static org.reflections.scanners.Scanners.SubTypes;
+import static org.reflections.scanners.Scanners.TypesAnnotated;
 
 /**
  * Reflections one-stop-shop object
@@ -96,7 +102,7 @@ import static org.reflections.scanners.Scanners.*;
  * Set<Method> voidMethods  = reflections.get(MethodsReturn.with(void.class).as(Method.class));
  * Set<Method> someMethods  = reflections.get(MethodsSignature.of(long.class, int.class).as(Method.class));
  * }</pre>
- *
+ * <p>
  * If not using {@code asClass()} or {@code as()} query results are strings, such that:
  * <pre>{@code Set<String> modules    = reflections.get(SubTypes.of(Module.class));
  * Set<String> singletons = reflections.get(TypesAnnotated.with(Singleton.class));
@@ -112,7 +118,6 @@ import static org.reflections.scanners.Scanners.*;
  * <i>For Javadoc, source code, and more information about Reflections Library, see http://github.com/ronmamo/reflections/</i>
  */
 public class Reflections implements NameHelper {
-    public final static Logger log = LoggerFactory.getLogger(Reflections.class);
 
     protected final transient Configuration configuration;
     protected final Store store;
@@ -154,7 +159,8 @@ public class Reflections implements NameHelper {
     /**
      * Convenient constructor for Reflections.
      * <p></p>see the javadoc of {@link ConfigurationBuilder#build(Object...)} for details.
-     * <p></p><i>it is preferred to use {@link org.reflections.util.ConfigurationBuilder} instead.</i> */
+     * <p></p><i>it is preferred to use {@link org.reflections.util.ConfigurationBuilder} instead.</i>
+     */
     public Reflections(Object... params) {
         this(ConfigurationBuilder.build(params));
     }
@@ -165,9 +171,8 @@ public class Reflections implements NameHelper {
     }
 
     protected Map<String, Map<String, Set<String>>> scan() {
-        long start = System.currentTimeMillis();
         Map<String, Set<Map.Entry<String, String>>> collect = configuration.getScanners().stream().map(Scanner::index).distinct()
-            .collect(Collectors.toMap(s -> s, s -> Collections.synchronizedSet(new HashSet<>())));
+                .collect(Collectors.toMap(s -> s, s -> Collections.synchronizedSet(new HashSet<>())));
         Set<URL> urls = configuration.getUrls();
 
         (configuration.isParallel() ? urls.stream().parallel() : urls.stream()).forEach(url -> {
@@ -186,38 +191,28 @@ public class Reflections implements NameHelper {
                                     if (entries != null) collect.get(scanner.index()).addAll(entries);
                                 }
                             } catch (Exception e) {
-                                if (log != null) log.debug("could not scan file {} with scanner {}", file.getRelativePath(), scanner.getClass().getSimpleName(), e);
+                                e.printStackTrace();
                             }
                         }
                     }
                 }
             } catch (Exception e) {
-                if (log != null) log.warn("could not create Vfs.Dir from url. ignoring the exception and continuing", e);
+                e.printStackTrace();
             }
         });
 
         // merge
-        Map<String, Map<String, Set<String>>> storeMap =
-            collect.entrySet().stream()
+        return collect.entrySet().stream()
                 .collect(Collectors.toMap(
-                    Map.Entry::getKey,
-                    entry -> entry.getValue().stream().filter(e -> e.getKey() != null)
-                        .collect(Collectors.groupingBy(
-                            Map.Entry::getKey,
-                            HashMap::new,
-                            Collectors.mapping(Map.Entry::getValue, Collectors.toSet())))));
-        if (log != null) {
-            int keys = 0, values = 0;
-            for (Map<String, Set<String>> map : storeMap.values()) {
-                keys += map.size();
-                values += map.values().stream().mapToLong(Set::size).sum();
-            }
-            log.info(format("Reflections took %d ms to scan %d urls, producing %d keys and %d values", System.currentTimeMillis() - start, urls.size(), keys, values));
-        }
-        return storeMap;
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().stream().filter(e -> e.getKey() != null)
+                                .collect(Collectors.groupingBy(
+                                        Map.Entry::getKey,
+                                        HashMap::new,
+                                        Collectors.mapping(Map.Entry::getValue, Collectors.toSet())))));
     }
 
-    private boolean doFilter(Vfs.File file, @Nullable Predicate<String> predicate) {
+    private boolean doFilter(Vfs.File file, Predicate<String> predicate) {
         String path = file.getRelativePath();
         String fqn = path.replace('/', '.');
         return predicate == null || predicate.test(path) || predicate.test(fqn);
@@ -231,10 +226,11 @@ public class Reflections implements NameHelper {
         }
     }
 
-    /** collect saved Reflection xml resources and merge it into a Reflections instance
+    /**
+     * collect saved Reflection xml resources and merge it into a Reflections instance
      * <p>by default, resources are collected from all urls that contains the package META-INF/reflections
      * and includes files matching the pattern .*-reflections.xml
-     * */
+     */
     public static Reflections collect() {
         return collect("META-INF/reflections/", new FilterBuilder().includePattern(".*-reflections\\.xml"));
     }
@@ -264,13 +260,13 @@ public class Reflections implements NameHelper {
         Iterable<Vfs.File> files = Vfs.findFiles(urls, packagePrefix, resourceNameFilter);
         Reflections reflections = new Reflections();
         StreamSupport.stream(files.spliterator(), false)
-            .forEach(file -> {
-                try (InputStream inputStream = file.openInputStream()) {
-                    reflections.collect(inputStream, serializer);
-                } catch (IOException e) {
-                    throw new ReflectionsException("could not merge " + file, e);
-                }
-            });
+                .forEach(file -> {
+                    try (InputStream inputStream = file.openInputStream()) {
+                        reflections.collect(inputStream, serializer);
+                    } catch (IOException e) {
+                        throw new ReflectionsException("could not merge " + file, e);
+                    }
+                });
         return reflections;
     }
 
@@ -294,10 +290,15 @@ public class Reflections implements NameHelper {
         }
     }
 
-    /** merges the given {@code reflections} instance metadata into this instance */
+    /**
+     * merges the given {@code reflections} instance metadata into this instance
+     */
     public Reflections merge(Reflections reflections) {
         reflections.store.forEach((index, map) -> this.store.merge(index, map, (m1, m2) -> {
-            m2.forEach((k, v) -> m1.merge(k, v, (s1, s2) -> { s1.addAll(s2); return s1;}));
+            m2.forEach((k, v) -> m1.merge(k, v, (s1, s2) -> {
+                s1.addAll(s2);
+                return s1;
+            }));
             return m1;
         }));
         return this;
@@ -327,7 +328,7 @@ public class Reflections implements NameHelper {
     }
 
     private void expandSupertypes(Map<String, Set<String>> subTypesStore,
-              Map<String, Set<String>> typesAnnotatedStore, String key, Class<?> type) {
+                                  Map<String, Set<String>> typesAnnotatedStore, String key, Class<?> type) {
         Set<Annotation> typeAnnotations = ReflectionUtils.getAnnotations(type);
         if (typesAnnotatedStore != null && !typeAnnotations.isEmpty()) {
             String typeName = type.getName();
@@ -369,7 +370,7 @@ public class Reflections implements NameHelper {
     public <T> Set<Class<? extends T>> getSubTypesOf(Class<T> type) {
         //noinspection unchecked
         return (Set<Class<? extends T>>) get(SubTypes.of(type)
-            .as((Class<? extends T>) Class.class, loaders()));
+                .as((Class<? extends T>) Class.class, loaders()));
     }
 
     /**
@@ -397,9 +398,9 @@ public class Reflections implements NameHelper {
         } else {
             if (annotation.isAnnotationPresent(Inherited.class)) {
                 return get(TypesAnnotated.get(annotation)
-                    .add(SubTypes.of(TypesAnnotated.get(annotation)
-                        .filter(c -> !forClass(c, loaders()).isInterface())))
-                    .asClass(loaders()));
+                        .add(SubTypes.of(TypesAnnotated.get(annotation)
+                                .filter(c -> !forClass(c, loaders()).isInterface())))
+                        .asClass(loaders()));
             } else {
                 return get(TypesAnnotated.get(annotation).asClass(loaders()));
             }
@@ -413,9 +414,9 @@ public class Reflections implements NameHelper {
      */
     public Set<Class<?>> getTypesAnnotatedWith(Annotation annotation) {
         return get(SubTypes.of(
-                TypesAnnotated.of(TypesAnnotated.get(annotation.annotationType())
-                    .filter(c -> withAnnotation(annotation).test(forClass(c, loaders())))))
-            .asClass(loaders()));
+                        TypesAnnotated.of(TypesAnnotated.get(annotation.annotationType())
+                                .filter(c -> withAnnotation(annotation).test(forClass(c, loaders())))))
+                .asClass(loaders()));
     }
 
     /**
@@ -430,7 +431,7 @@ public class Reflections implements NameHelper {
             Class<? extends Annotation> type = annotation.annotationType();
             if (type.isAnnotationPresent(Inherited.class)) {
                 return get(TypesAnnotated.with(type).asClass(loaders()).filter(withAnnotation(annotation))
-                    .add(SubTypes.of(TypesAnnotated.with(type).asClass(loaders()).filter(c -> !c.isInterface()))));
+                        .add(SubTypes.of(TypesAnnotated.with(type).asClass(loaders()).filter(c -> !c.isInterface()))));
             } else {
                 return get(TypesAnnotated.with(type).asClass(loaders()).filter(withAnnotation(annotation)));
             }
@@ -453,7 +454,7 @@ public class Reflections implements NameHelper {
      */
     public Set<Method> getMethodsAnnotatedWith(Annotation annotation) {
         return get(MethodsAnnotated.with(annotation.annotationType()).as(Method.class, loaders())
-            .filter(withAnnotation(annotation)));
+                .filter(withAnnotation(annotation)));
     }
 
     /**
@@ -499,7 +500,7 @@ public class Reflections implements NameHelper {
      */
     public Set<Constructor> getConstructorsAnnotatedWith(Annotation annotation) {
         return get(ConstructorsAnnotated.with(annotation.annotationType()).as(Constructor.class, loaders())
-            .filter(withAnyParameterAnnotation(annotation)));
+                .filter(withAnyParameterAnnotation(annotation)));
     }
 
     /**
@@ -536,7 +537,7 @@ public class Reflections implements NameHelper {
      */
     public Set<Field> getFieldsAnnotatedWith(Annotation annotation) {
         return get(FieldsAnnotated.with(annotation.annotationType()).as(Field.class, loaders())
-            .filter(withAnnotation(annotation)));
+                .filter(withAnnotation(annotation)));
     }
 
     /**
@@ -563,7 +564,7 @@ public class Reflections implements NameHelper {
      */
     public List<String> getMemberParameterNames(Member member) {
         return store.getOrDefault(MethodParameterNamesScanner.class.getSimpleName(), Collections.emptyMap()).getOrDefault(toName((AnnotatedElement) member), Collections.emptySet())
-            .stream().flatMap(s -> Stream.of(s.split(", "))).collect(Collectors.toList());
+                .stream().flatMap(s -> Stream.of(s.split(", "))).collect(Collectors.toList());
     }
 
     /**
@@ -602,7 +603,9 @@ public class Reflections implements NameHelper {
         return store;
     }
 
-    /** returns the {@link org.reflections.Configuration} object of this instance */
+    /**
+     * returns the {@link org.reflections.Configuration} object of this instance
+     */
     public Configuration getConfiguration() {
         return configuration;
     }
@@ -623,5 +626,7 @@ public class Reflections implements NameHelper {
         return serializer.save(this, filename);
     }
 
-    ClassLoader[] loaders() { return configuration.getClassLoaders(); }
+    ClassLoader[] loaders() {
+        return configuration.getClassLoaders();
+    }
 }

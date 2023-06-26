@@ -3,7 +3,6 @@ package org.reflections.scanners;
 import javassist.bytecode.ClassFile;
 import org.reflections.vfs.Vfs;
 
-import javax.annotation.Nullable;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
@@ -15,19 +14,24 @@ import java.util.stream.Collectors;
  * Scanner {@link #scan(ClassFile)} method receives a {@link ClassFile} and produce a list of {@link Map.Entry}.
  * These key/values will be stored under {@link #index()} for querying.
  * <br><br>see more in {@link Scanners}
- * */
+ */
 public interface Scanner {
 
-    /** scan the given {@code classFile} and produces list of {@link Map.Entry} key/values */
+    /**
+     * scan the given {@code classFile} and produces list of {@link Map.Entry} key/values
+     */
     List<Map.Entry<String, String>> scan(ClassFile classFile);
 
-    /** scan the given {@code file} and produces list of {@link Map.Entry} key/values */
-    @Nullable
+    /**
+     * scan the given {@code file} and produces list of {@link Map.Entry} key/values
+     */
     default List<Map.Entry<String, String>> scan(Vfs.File file) {
         return null;
     }
 
-    /** unique index name for scanner */
+    /**
+     * unique index name for scanner
+     */
     default String index() {
         return getClass().getSimpleName();
     }

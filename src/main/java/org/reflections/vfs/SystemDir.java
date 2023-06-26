@@ -11,6 +11,7 @@ import java.util.Collections;
  * An implementation of {@link org.reflections.vfs.Vfs.Dir} for directory {@link java.io.File}.
  */
 public class SystemDir implements Vfs.Dir {
+
     private final File file;
 
     public SystemDir(File file) {

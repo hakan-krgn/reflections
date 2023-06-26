@@ -22,50 +22,65 @@ import java.util.stream.Collectors;
  * <i>note that includePackage/excludePackage value is mapped into a prefix pattern with a trailing dot, for example: {@code includePackage("a.b")} is equivalent to {@code includePattern("a\\.b\\..*)}
  */
 public class FilterBuilder implements Predicate<String> {
+
     private final List<Predicate<String>> chain = new ArrayList<>();
 
-    public FilterBuilder() {}
+    public FilterBuilder() {
+    }
 
-	private FilterBuilder(Collection<Predicate<String>> filters) {
+    private FilterBuilder(Collection<Predicate<String>> filters) {
         chain.addAll(filters);
     }
 
-    /** include package prefix <pre>{@code new FilterBuilder().includePackage("java.lang")}</pre>
+    /**
+     * include package prefix <pre>{@code new FilterBuilder().includePackage("java.lang")}</pre>
      * <i>note that the {@code value} is mapped into a prefix pattern with a trailing dot, for example {@code "a.b" == "a\\.b\\..*}
-     * <p>see more in {@link #prefixPattern(String)} */
+     * <p>see more in {@link #prefixPattern(String)}
+     */
     public FilterBuilder includePackage(String value) {
         return includePattern(prefixPattern(value));
     }
 
-    /** exclude package prefix <pre>{@code new FilterBuilder().excludePackage("java.lang")}</pre>
+    /**
+     * exclude package prefix <pre>{@code new FilterBuilder().excludePackage("java.lang")}</pre>
      * <i>note that the {@code value} is mapped into a prefix pattern with a trailing dot, for example {@code "a.b" == "a\\.b\\..*}
-     * <p>see more in {@link #prefixPattern(String)} */
+     * <p>see more in {@link #prefixPattern(String)}
+     */
     public FilterBuilder excludePackage(String value) {
         return excludePattern(prefixPattern(value));
     }
 
-    /** include regular expression <pre>{@code new FilterBuilder().includePattern("java\\.lang\\..*")}</pre>
-     * see also {@link #includePackage(String)}*/
+    /**
+     * include regular expression <pre>{@code new FilterBuilder().includePattern("java\\.lang\\..*")}</pre>
+     * see also {@link #includePackage(String)}
+     */
     public FilterBuilder includePattern(String regex) {
         return add(new FilterBuilder.Include(regex));
     }
 
-    /** exclude regular expression <pre>{@code new FilterBuilder().excludePattern("java\\.lang\\..*")}</pre>
-     * see also {@link #excludePackage(String)}*/
+    /**
+     * exclude regular expression <pre>{@code new FilterBuilder().excludePattern("java\\.lang\\..*")}</pre>
+     * see also {@link #excludePackage(String)}
+     */
     public FilterBuilder excludePattern(String regex) {
         return add(new FilterBuilder.Exclude(regex));
     }
 
-    /** include a regular expression <p>deprecated, use {@link #includePattern(String)} */
+    /**
+     * include a regular expression <p>deprecated, use {@link #includePattern(String)}
+     */
     @Deprecated
     public FilterBuilder include(String regex) {
         return add(new Include(regex));
     }
 
-    /** exclude a regular expression <p>deprecated, use {@link #excludePattern(String)} */
+    /**
+     * exclude a regular expression <p>deprecated, use {@link #excludePattern(String)}
+     */
     @Deprecated
     public FilterBuilder exclude(String regex) {
-        add(new Exclude(regex)); return this;
+        add(new Exclude(regex));
+        return this;
     }
 
     /**
@@ -80,9 +95,14 @@ public class FilterBuilder implements Predicate<String> {
             char prefix = trimmed.charAt(0);
             String pattern = prefixPattern(trimmed.substring(1));
             switch (prefix) {
-                case '+': filters.add(new Include(pattern)); break;
-                case '-': filters.add(new Exclude(pattern)); break;
-                default: throw new ReflectionsException("includeExclude should start with either + or -");
+                case '+':
+                    filters.add(new Include(pattern));
+                    break;
+                case '-':
+                    filters.add(new Exclude(pattern));
+                    break;
+                default:
+                    throw new ReflectionsException("includeExclude should start with either + or -");
             }
         }
         return new FilterBuilder(filters);
@@ -97,10 +117,16 @@ public class FilterBuilder implements Predicate<String> {
         boolean accept = chain.isEmpty() || chain.get(0) instanceof Exclude;
 
         for (Predicate<String> filter : chain) {
-            if (accept && filter instanceof Include) {continue;} //skip if this filter won't change
-            if (!accept && filter instanceof Exclude) {continue;}
+            if (accept && filter instanceof Include) {
+                continue;
+            } //skip if this filter won't change
+            if (!accept && filter instanceof Exclude) {
+                continue;
+            }
             accept = filter.test(regex);
-            if (!accept && filter instanceof Exclude) {break;} //break on first exclusion
+            if (!accept && filter instanceof Exclude) {
+                break;
+            } //break on first exclusion
         }
         return accept;
     }
@@ -117,35 +143,74 @@ public class FilterBuilder implements Predicate<String> {
         return Objects.hash(chain);
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
         return chain.stream().map(Object::toString).collect(Collectors.joining(", "));
     }
 
-    /** maps fqn to prefix pattern with a trailing dot, for example {@code packageNamePrefix("a.b") == "a\\.b\\..*} */
+    /**
+     * maps fqn to prefix pattern with a trailing dot, for example {@code packageNamePrefix("a.b") == "a\\.b\\..*}
+     */
     private static String prefixPattern(String fqn) {
         if (!fqn.endsWith(".")) fqn += ".";
         return fqn.replace(".", "\\.").replace("$", "\\$") + ".*";
     }
 
     abstract static class Matcher implements Predicate<String> {
+
         final Pattern pattern;
-        Matcher(String regex) { pattern = Pattern.compile(regex); }
-        @Override public int hashCode() { return Objects.hash(pattern); }
-        @Override public boolean equals(Object o) {
+
+        Matcher(String regex) {
+            pattern = Pattern.compile(regex);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(pattern);
+        }
+
+        @Override
+        public boolean equals(Object o) {
             return this == o || o != null && getClass() == o.getClass() && Objects.equals(pattern.pattern(), ((Matcher) o).pattern.pattern());
         }
-        @Override public String toString() { return pattern.pattern(); }
+
+        @Override
+        public String toString() {
+            return pattern.pattern();
+        }
     }
 
     static class Include extends Matcher {
-        Include(String regex) { super(regex); }
-        @Override public boolean test(String regex) { return pattern.matcher(regex).matches(); }
-        @Override public String toString() { return "+" + pattern; }
+
+        Include(String regex) {
+            super(regex);
+        }
+
+        @Override
+        public boolean test(String regex) {
+            return pattern.matcher(regex).matches();
+        }
+
+        @Override
+        public String toString() {
+            return "+" + pattern;
+        }
     }
 
     static class Exclude extends Matcher {
-        Exclude(String regex) { super(regex); }
-        @Override public boolean test(String regex) { return !pattern.matcher(regex).matches(); }
-        @Override public String toString() { return "-" + pattern; }
+
+        Exclude(String regex) {
+            super(regex);
+        }
+
+        @Override
+        public boolean test(String regex) {
+            return !pattern.matcher(regex).matches();
+        }
+
+        @Override
+        public String toString() {
+            return "-" + pattern;
+        }
     }
 }

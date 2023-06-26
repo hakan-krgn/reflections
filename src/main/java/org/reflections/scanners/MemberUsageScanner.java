@@ -17,14 +17,16 @@ import org.reflections.ReflectionsException;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.JavassistHelper;
 
-import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
-/** scan methods/constructors/fields usage */
+/**
+ * scan methods/constructors/fields usage
+ */
 public class MemberUsageScanner implements Scanner {
+
     private Predicate<String> resultFilter = s -> true; //accept all by default
     private final ClassLoader[] classLoaders;
     private volatile ClassPool classPool;
@@ -33,7 +35,7 @@ public class MemberUsageScanner implements Scanner {
         this(ClasspathHelper.classLoaders());
     }
 
-    public MemberUsageScanner(@Nonnull ClassLoader[] classLoaders) {
+    public MemberUsageScanner(ClassLoader[] classLoaders) {
         this.classLoaders = classLoaders;
     }
 
@@ -67,13 +69,13 @@ public class MemberUsageScanner implements Scanner {
     private void scanMember(CtBehavior member, List<Map.Entry<String, String>> entries) throws CannotCompileException {
         //key contains this$/val$ means local field/parameter closure
         final String key = member.getDeclaringClass().getName() + "." + member.getMethodInfo().getName() +
-                "(" + parameterNames(member.getMethodInfo()) + ")"; //+ " #" + member.getMethodInfo().getLineNumber(0)
+                           "(" + parameterNames(member.getMethodInfo()) + ")"; //+ " #" + member.getMethodInfo().getLineNumber(0)
         member.instrument(new ExprEditor() {
             @Override
             public void edit(NewExpr e) {
                 try {
                     add(entries, e.getConstructor().getDeclaringClass().getName() + "." + "<init>" +
-                        "(" + parameterNames(e.getConstructor().getMethodInfo()) + ")", key + " #" + e.getLineNumber());
+                                 "(" + parameterNames(e.getConstructor().getMethodInfo()) + ")", key + " #" + e.getLineNumber());
                 } catch (NotFoundException e1) {
                     throw new ReflectionsException("Could not find new instance usage in " + key, e1);
                 }
@@ -83,7 +85,7 @@ public class MemberUsageScanner implements Scanner {
             public void edit(MethodCall m) {
                 try {
                     add(entries, m.getMethod().getDeclaringClass().getName() + "." + m.getMethodName() +
-                                        "(" + parameterNames(m.getMethod().getMethodInfo()) + ")", key + " #" + m.getLineNumber());
+                                 "(" + parameterNames(m.getMethod().getMethodInfo()) + ")", key + " #" + m.getLineNumber());
                 } catch (NotFoundException e) {
                     throw new ReflectionsException("Could not find member " + m.getClassName() + " in " + key, e);
                 }
@@ -93,7 +95,7 @@ public class MemberUsageScanner implements Scanner {
             public void edit(ConstructorCall c) {
                 try {
                     add(entries, c.getConstructor().getDeclaringClass().getName() + "." + "<init>" +
-                                        "(" + parameterNames(c.getConstructor().getMethodInfo()) + ")", key + " #" + c.getLineNumber());
+                                 "(" + parameterNames(c.getConstructor().getMethodInfo()) + ")", key + " #" + c.getLineNumber());
                 } catch (NotFoundException e) {
                     throw new ReflectionsException("Could not find member " + c.getClassName() + " in " + key, e);
                 }

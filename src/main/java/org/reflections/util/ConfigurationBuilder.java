@@ -9,6 +9,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,7 @@ import java.util.stream.Stream;
  * <p><i>(breaking changes) Inputs filter will NOT be set automatically, consider adding in case too many classes are scanned.</i>
  */
 public class ConfigurationBuilder implements Configuration {
+
     public static final Set<Scanner> DEFAULT_SCANNERS = new HashSet<>(Arrays.asList(Scanners.TypesAnnotated, Scanners.SubTypes));
     public static final Predicate<String> DEFAULT_INPUTS_FILTER = t -> true;
 
@@ -48,7 +50,8 @@ public class ConfigurationBuilder implements Configuration {
         urls = new HashSet<>();
     }
 
-    /** constructs a {@link ConfigurationBuilder}.
+    /**
+     * constructs a {@link ConfigurationBuilder}.
      * <p>each parameter in {@code params} is referred by its type:
      * <ul>
      *     <li>{@link String} - add urls using {@link ClasspathHelper#forPackage(String, ClassLoader...)} and an input filter
@@ -71,14 +74,18 @@ public class ConfigurationBuilder implements Configuration {
         List<Object> parameters = new ArrayList<>();
         for (Object param : params) {
             if (param != null) {
-                if (param.getClass().isArray()) { for (Object p : (Object[]) param) parameters.add(p); }
-                else if (param instanceof Iterable) { for (Object p : (Iterable) param) parameters.add(p); }
-                else parameters.add(param);
+                if (param.getClass().isArray()) {
+                    Collections.addAll(parameters, (Object[]) param);
+                } else if (param instanceof Iterable) {
+                    for (Object p : (Iterable) param) parameters.add(p);
+                } else parameters.add(param);
             }
         }
 
         ClassLoader[] loaders = Stream.of(params).filter(p -> p instanceof ClassLoader).distinct().toArray(ClassLoader[]::new);
-        if (loaders.length != 0) { builder.addClassLoaders(loaders); }
+        if (loaders.length != 0) {
+            builder.addClassLoaders(loaders);
+        }
 
         FilterBuilder inputsFilter = new FilterBuilder();
         builder.filterInputsBy(inputsFilter);
@@ -95,8 +102,11 @@ public class ConfigurationBuilder implements Configuration {
             } else if (param instanceof Scanner) {
                 builder.addScanners((Scanner) param);
             } else if (param instanceof Class && Scanner.class.isAssignableFrom((Class) param)) {
-                try { builder.addScanners(((Class<Scanner>) param).getDeclaredConstructor().newInstance()); }
-                catch (Exception e) { throw new RuntimeException(e); }
+                try {
+                    builder.addScanners(((Class<Scanner>) param).getDeclaredConstructor().newInstance());
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
             } else if (param instanceof Predicate) {
                 builder.filterInputsBy((Predicate<String>) param);
             } else throw new ReflectionsException("could not use param '" + param + "'");
@@ -110,12 +120,16 @@ public class ConfigurationBuilder implements Configuration {
         return builder;
     }
 
-    /** {@link #addUrls(URL...)} by applying {@link ClasspathHelper#forPackage(String, ClassLoader...)} for the given {@code pkg}*/
+    /**
+     * {@link #addUrls(URL...)} by applying {@link ClasspathHelper#forPackage(String, ClassLoader...)} for the given {@code pkg}
+     */
     public ConfigurationBuilder forPackage(String pkg, ClassLoader... classLoaders) {
         return addUrls(ClasspathHelper.forPackage(pkg, classLoaders));
     }
 
-    /** {@link #addUrls(URL...)} by applying {@link ClasspathHelper#forPackage(String, ClassLoader...)} for the given {@code packages}*/
+    /**
+     * {@link #addUrls(URL...)} by applying {@link ClasspathHelper#forPackage(String, ClassLoader...)} for the given {@code packages}
+     */
     public ConfigurationBuilder forPackages(String... packages) {
         for (String pkg : packages) forPackage(pkg);
         return this;
@@ -125,17 +139,22 @@ public class ConfigurationBuilder implements Configuration {
     /* @inherited */
     public Set<Scanner> getScanners() {
         return scanners != null ? scanners : DEFAULT_SCANNERS;
-	}
+    }
 
-    /** set the scanners instances for scanning different metadata */
+    /**
+     * set the scanners instances for scanning different metadata
+     */
     public ConfigurationBuilder setScanners(Scanner... scanners) {
         this.scanners = new HashSet<>(Arrays.asList(scanners));
         return this;
     }
 
-    /** set the scanners instances for scanning different metadata */
+    /**
+     * set the scanners instances for scanning different metadata
+     */
     public ConfigurationBuilder addScanners(Scanner... scanners) {
-        if (this.scanners == null) setScanners(scanners); else this.scanners.addAll(Arrays.asList(scanners));
+        if (this.scanners == null) setScanners(scanners);
+        else this.scanners.addAll(Arrays.asList(scanners));
         return this;
     }
 
@@ -145,32 +164,40 @@ public class ConfigurationBuilder implements Configuration {
         return urls;
     }
 
-    /** set the urls to be scanned
+    /**
+     * set the urls to be scanned
      * <p>use {@link ClasspathHelper} convenient methods to get the relevant urls
-     * <p>see also {@link #forPackages(String...)} */
+     * <p>see also {@link #forPackages(String...)}
+     */
     public ConfigurationBuilder setUrls(Collection<URL> urls) {
-		this.urls = new HashSet<>(urls);
+        this.urls = new HashSet<>(urls);
         return this;
-	}
+    }
 
-    /** set the urls to be scanned
+    /**
+     * set the urls to be scanned
      * <p>use {@link ClasspathHelper} convenient methods to get the relevant urls
-     * <p>see also {@link #forPackages(String...)} */
+     * <p>see also {@link #forPackages(String...)}
+     */
     public ConfigurationBuilder setUrls(URL... urls) {
         return setUrls(Arrays.asList(urls));
-	}
+    }
 
-    /** add urls to be scanned
+    /**
+     * add urls to be scanned
      * <p>use {@link ClasspathHelper} convenient methods to get the relevant urls
-     * <p>see also {@link #forPackages(String...)} */
+     * <p>see also {@link #forPackages(String...)}
+     */
     public ConfigurationBuilder addUrls(Collection<URL> urls) {
         this.urls.addAll(urls);
         return this;
     }
 
-    /** add urls to be scanned
+    /**
+     * add urls to be scanned
      * <p>use {@link ClasspathHelper} convenient methods to get the relevant urls
-     * <p>see also {@link #forPackages(String...)} */
+     * <p>see also {@link #forPackages(String...)}
+     */
     public ConfigurationBuilder addUrls(URL... urls) {
         return addUrls(Arrays.asList(urls));
     }
@@ -181,15 +208,19 @@ public class ConfigurationBuilder implements Configuration {
         return inputsFilter != null ? inputsFilter : DEFAULT_INPUTS_FILTER;
     }
 
-    /** sets the input filter for all resources to be scanned.
-     * <p>prefer using {@link FilterBuilder} */
+    /**
+     * sets the input filter for all resources to be scanned.
+     * <p>prefer using {@link FilterBuilder}
+     */
     public ConfigurationBuilder setInputsFilter(Predicate<String> inputsFilter) {
         this.inputsFilter = inputsFilter;
         return this;
     }
 
-    /** sets the input filter for all resources to be scanned.
-     * <p>prefer using {@link FilterBuilder} */
+    /**
+     * sets the input filter for all resources to be scanned.
+     * <p>prefer using {@link FilterBuilder}
+     */
     public ConfigurationBuilder filterInputsBy(Predicate<String> inputsFilter) {
         return setInputsFilter(inputsFilter);
     }
@@ -200,7 +231,9 @@ public class ConfigurationBuilder implements Configuration {
         return isParallel;
     }
 
-    /** if true, scan urls in parallel. */
+    /**
+     * if true, scan urls in parallel.
+     */
     public ConfigurationBuilder setParallel(boolean parallel) {
         isParallel = parallel;
         return this;
@@ -213,16 +246,20 @@ public class ConfigurationBuilder implements Configuration {
     }
 
 
-    /** set optional class loaders used for resolving types. */
+    /**
+     * set optional class loaders used for resolving types.
+     */
     public ConfigurationBuilder setClassLoaders(ClassLoader[] classLoaders) {
         this.classLoaders = classLoaders;
         return this;
     }
 
-    /** add optional class loaders used for resolving types. */
+    /**
+     * add optional class loaders used for resolving types.
+     */
     public ConfigurationBuilder addClassLoaders(ClassLoader... classLoaders) {
         this.classLoaders = this.classLoaders == null ? classLoaders :
-            Stream.concat(Arrays.stream(this.classLoaders), Arrays.stream(classLoaders)).distinct().toArray(ClassLoader[]::new);
+                Stream.concat(Arrays.stream(this.classLoaders), Arrays.stream(classLoaders)).distinct().toArray(ClassLoader[]::new);
         return this;
     }
 
@@ -232,8 +269,10 @@ public class ConfigurationBuilder implements Configuration {
         return expandSuperTypes;
     }
 
-    /** if set to true, Reflections will expand super types after scanning.
-     * <p>see {@link org.reflections.Reflections#expandSuperTypes(Map, Map)} */
+    /**
+     * if set to true, Reflections will expand super types after scanning.
+     * <p>see {@link org.reflections.Reflections#expandSuperTypes(Map, Map)}
+     */
     public ConfigurationBuilder setExpandSuperTypes(boolean expandSuperTypes) {
         this.expandSuperTypes = expandSuperTypes;
         return this;

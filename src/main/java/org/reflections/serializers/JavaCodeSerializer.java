@@ -17,7 +17,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-/** source code serialization for {@link org.reflections.Reflections} <pre>{@code reflections.save(file, new JavaCodeSerializer())}</pre>
+/**
+ * source code serialization for {@link org.reflections.Reflections} <pre>{@code reflections.save(file, new JavaCodeSerializer())}</pre>
  * <p></p>an example of produced java source:
  * <pre>{@code
  * public interface MyTestModelStore {
@@ -62,6 +63,7 @@ public class JavaCodeSerializer implements Serializer {
 
     /**
      * serialize and save to java source code
+     *
      * @param name should be in the pattern {@code path/path/path/package.package.classname},
      */
     public File save(Reflections reflections, String name) {
